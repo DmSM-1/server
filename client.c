@@ -10,7 +10,7 @@
 #include <unistd.h>
 
 
-#define SERVER_IP inet_addr("95.181.175.77")
+#define SERVER_IP inet_addr("127.0.0.1")
 
 #define handle_error(msg) \
            do { perror(msg); exit(EXIT_FAILURE); } while (0)
@@ -37,7 +37,7 @@ int main(int argc, char** argv){
 
 
     buf[0] = 1;
-    memcpy(buf, filename, 128);
+    memcpy(buf+1, filename, 128);
     send(sfd, buf, 1025, 0);
 
     buf[0] = 2;

@@ -10,7 +10,8 @@
 #include <unistd.h>
 
 
-#define SERVER_IP inet_addr("95.181.175.77")
+// #define SERVER_IP inet_addr("95.181.175.77")
+#define SERVER_IP inet_addr("127.0.0.1")
 
 #define handle_error(msg) \
            do { perror(msg); exit(EXIT_FAILURE); } while (0)
@@ -41,7 +42,7 @@ int main(int argc, char** argv){
 
     int stage = 0;
     char buf[1025];
-    char filename[128];
+    char filename[128] = "buf/";
     FILE* file;
 
     while (recv(confd, buf, 1025, 0)>0){
@@ -49,7 +50,7 @@ int main(int argc, char** argv){
 
             case 1: 
                 printf("eee\n");
-                memcpy(filename, buf+1, 128); 
+                memcpy(filename+4, buf+1, 128); 
                 printf("Open file %s\n", filename);
                 
                 file = fopen(filename, "wb"); 
