@@ -99,6 +99,10 @@ int main(int argc, char** argv){
 
     int flag = 1;
     setsockopt(sfd, IPPROTO_TCP, TCP_NODELAY, (char *)&flag, sizeof(int));
+    int buf_size = 1024 * 1024;
+    setsockopt(sfd, SOL_SOCKET, SO_RCVBUF, &buf_size, sizeof(buf_size));
+    setsockopt(sfd, SOL_SOCKET, SO_SNDBUF, &buf_size, sizeof(buf_size));
+    
     
     if (connect(sfd, (struct sockaddr *) &server_addr, sizeof(server_addr)) == -1)
     handle_error("connect");

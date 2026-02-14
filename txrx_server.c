@@ -21,7 +21,7 @@
 #define times 4
 
 #ifdef DEBUG
-    #define SERVER_IP inet_addr("127.0.0.10")
+    #define SERVER_IP inet_addr("192.168.3.12")
 #else
     #define SERVER_IP inet_addr("95.181.175.77")
 #endif
@@ -124,8 +124,13 @@ void* pc_handler(void* args){
     int sfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sfd == -1)
         handle_error("socket");
+
     int flag = 1;
     setsockopt(sfd, IPPROTO_TCP, TCP_NODELAY, (char *)&flag, sizeof(int));
+    
+    int buf_size = 1024 * 1024;
+    setsockopt(sfd, SOL_SOCKET, SO_RCVBUF, &buf_size, sizeof(buf_size));
+    setsockopt(sfd, SOL_SOCKET, SO_SNDBUF, &buf_size, sizeof(buf_size));
     
 
     if (bind(sfd, (struct sockaddr *) &server_addr, sizeof(server_addr)) == -1)
@@ -137,6 +142,10 @@ void* pc_handler(void* args){
             int cl_size = sizeof(client_addr);
 
         int confd = accept(sfd, (struct sockaddr *) &server_addr, &cl_size);
+        setsockopt(confd, IPPROTO_TCP, TCP_NODELAY, (char *)&flag, sizeof(int));
+        int buf_size = 1024 * 1024;
+        setsockopt(confd, SOL_SOCKET, SO_RCVBUF, &buf_size, sizeof(buf_size));
+        setsockopt(confd, SOL_SOCKET, SO_SNDBUF, &buf_size, sizeof(buf_size));
 
         printf("PC Connection was established\n");
 
@@ -204,7 +213,7 @@ void* pc_handler(void* args){
         
         sem_post(&init_tx);
         sem_post(&init_rx);
-        
+
         sem_wait(&end_tx);
         sem_wait(&end_rx);
         
