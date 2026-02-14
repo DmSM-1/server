@@ -50,7 +50,7 @@ int main(int argc, char** argv){
 
             case 1: 
                 printf("eee\n");
-                memcpy(filename+4, buf+1, 128); 
+                memcpy(filename+4, buf+1, 124); 
                 printf("Open file %s\n", filename);
                 
                 file = fopen(filename, "wb"); 
