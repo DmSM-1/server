@@ -118,7 +118,7 @@ void* pc_handler(void* args){
     
     server_addr.sin_family       = AF_INET;
     server_addr.sin_addr.s_addr  = SERVER_IP;
-    server_addr.sin_port         = htons(8000);
+    server_addr.sin_port         = 2000;
 
     int sfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sfd == -1)

@@ -12,7 +12,7 @@
 #include <pthread.h>
 #include <dirent.h>
 
-#define DEBUG
+// #define DEBUG
 
 #ifdef DEBUG
     #define SERVER_IP inet_addr("127.0.0.10")
@@ -85,7 +85,7 @@ int main(int argc, char** argv){
 
     server_addr.sin_family       = AF_INET;
     server_addr.sin_addr.s_addr  = SERVER_IP;
-    server_addr.sin_port         = htons(8000);
+    server_addr.sin_port         = 2000;
 
     int num_dirs = count_subdirectories("pc_dir");
 
