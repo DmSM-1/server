@@ -112,6 +112,10 @@ int main(int argc, char** argv){
     char name[128];
 
     send_cmd(sfd, "INIT", packet_size, buf);
+    send_cmd(sfd, "INIT", packet_size, buf);
+    send_cmd(sfd, "INIT", packet_size, buf);
+    send_cmd(sfd, "INIT", packet_size, buf);
+    send_cmd(sfd, "INIT", packet_size, buf);
     send_file(sfd, "pc_dir/config.mat", "cfg", "CONF", packet_size, buf);
     
     for (int i = 1; i < num_dirs+1; i++){   
