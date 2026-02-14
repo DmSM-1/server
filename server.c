@@ -10,8 +10,8 @@
 #include <unistd.h>
 
 
-// #define SERVER_IP inet_addr("95.181.175.77")
-#define SERVER_IP inet_addr("127.0.0.1")
+#define SERVER_IP inet_addr("95.181.175.77")
+// #define SERVER_IP inet_addr("127.0.0.1")
 
 #define handle_error(msg) \
            do { perror(msg); exit(EXIT_FAILURE); } while (0)
