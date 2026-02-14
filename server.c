@@ -1,14 +1,20 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
+#include <stdlib.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <sys/un.h>
+#include <unistd.h>
+
 
 
 #define SERVER_IP inet_addr("95.181.175.77")
+
+#define handle_error(msg) \
+           do { perror(msg); exit(EXIT_FAILURE); } while (0)
 
 
 int main(int argc, char** argv){
@@ -30,7 +36,7 @@ int main(int argc, char** argv){
 
     listen(sfd, 1);
 
-    size_t cl_size = sizeof(client_addr);
+    int cl_size = sizeof(client_addr);
 
     int confd = accept(sfd, (struct sockaddr *) &server_addr, &cl_size);
 
