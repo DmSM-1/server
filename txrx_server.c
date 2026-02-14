@@ -15,7 +15,7 @@
 
 // #define DEBUG
 #define min(a,b) ((long long)a>(long long)b)?(long long)b:(long long)a
-#define payload 1024
+#define payload 1024*128
 #define packet_size (payload+4)
 #define times 4
 
@@ -136,7 +136,7 @@ void* pc_handler(void* args){
 
         printf("PC Connection was established\n");
 
-        char buf[2056];
+        char buf[packet_size];
         char filename[128] = "buf/";
         char name[128];
         char file_open = 0;

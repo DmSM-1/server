@@ -24,6 +24,9 @@
 #define handle_error(msg) \
            do { perror(msg); exit(EXIT_FAILURE); } while (0)
 
+#define payload 1024*128
+#define packet_size (payload+4)
+#define times 4
 
 void robust_send(int sfd, char* buf, size_t size){
     int sent;
@@ -96,20 +99,20 @@ int main(int argc, char** argv){
     if (connect(sfd, (struct sockaddr *) &server_addr, sizeof(server_addr)) == -1)
     handle_error("connect");
     
-    char buf[2056];
+    char buf[packet_size];
     char filename[128];
     char name[128];
 
-    send_cmd(sfd, "INIT", 1028, buf);
-    send_file(sfd, "pc_dir/config.mat", "cfg", "CONF", 1028, buf);
+    send_cmd(sfd, "INIT", packet_size, buf);
+    send_file(sfd, "pc_dir/config.mat", "cfg", "CONF", packet_size, buf);
     
     for (int i = 1; i < num_dirs+1; i++){   
         sprintf(filename, "pc_dir/%d/tx_data.mat", i);
         sprintf(name, "%d", i);
-        send_file(sfd, filename, name, "FILE", 1028, buf);
+        send_file(sfd, filename, name, "FILE", packet_size, buf);
     }
 
-    send_cmd(sfd, "STAR", 1028, buf);
+    send_cmd(sfd, "STAR", packet_size, buf);
 
     int pos = 0;
     int readed = 0;
@@ -119,10 +122,10 @@ int main(int argc, char** argv){
     FILE* file;
 
 
-    while ((readed = recv(sfd, buf+pos, 1028 - pos, 0))>0){
+    while ((readed = recv(sfd, buf+pos, packet_size - pos, 0))>0){
         pos += readed;
 
-        if (pos < 1028){
+        if (pos < packet_size){
             continue;
         }
 
@@ -135,8 +138,8 @@ int main(int argc, char** argv){
             file_open = 1;
         }
         else if (memcmp(buf, "WRIT", 4) == 0 && file_open == 1){
-            fwrite(buf+4, 1, min(size, 1024), file);
-            size -= min(size, 1024);
+            fwrite(buf+4, 1, min(size, payload), file);
+            size -= min(size, payload);
         }
         else if (memcmp(buf, "CLOS", 4) == 0 && file_open == 1){
             printf("PC: CLOSE %s\n", filename);
@@ -151,8 +154,8 @@ int main(int argc, char** argv){
             }
             break;
         }
-        memmove(buf, buf+1028, pos-1028);
-        pos -= 1028;
+        memmove(buf, buf+packet_size, pos-packet_size);
+        pos -= packet_size;
     }
 
 
