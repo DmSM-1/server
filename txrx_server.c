@@ -15,7 +15,7 @@
 
 // #define DEBUG
 #define min(a,b) ((long long)a>(long long)b)?(long long)b:(long long)a
-#define payload 1024*128
+#define payload 1024*16
 #define packet_size (payload+4)
 #define times 4
 

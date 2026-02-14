@@ -24,7 +24,7 @@
 #define handle_error(msg) \
            do { perror(msg); exit(EXIT_FAILURE); } while (0)
 
-#define payload 1024*128
+#define payload 1024*16
 #define packet_size (payload+4)
 #define times 4
 
