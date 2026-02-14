@@ -20,30 +20,23 @@ int main(int argc, char** argv){
 
     struct sockaddr_in server_addr, client_addr;
 
-    char* buf = malloc(1024);
-
     server_addr.sin_family       = AF_INET;
     server_addr.sin_addr.s_addr  = SERVER_IP;
     server_addr.sin_port         = 2000;
-
+    
     int sfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sfd == -1)
-        handle_error("socket");
-
-    if (bind(sfd, (struct sockaddr *) &server_addr, sizeof(server_addr)) == -1)
-        handle_error("bind");
-
-    listen(sfd, 1);
-
-    int cl_size = sizeof(client_addr);
-
-    int confd = accept(sfd, (struct sockaddr *) &server_addr, &cl_size);
-
-    recv(confd, buf, 1024, 0);
+    handle_error("socket");
     
-    printf("%s\n", buf);
+    if (connect(sfd, (struct sockaddr *) &server_addr, sizeof(server_addr)) == -1)
+    handle_error("connect");
+    
+    char* buf = malloc(1024);
 
-    close(confd);
+    read(0, buf, 1024);
+    send(sfd, buf, 1024, 0);
+
+    free(buf);
     close(sfd);
 
     return 0;
