@@ -1,5 +1,6 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -24,7 +25,7 @@
 #define handle_error(msg) \
            do { perror(msg); exit(EXIT_FAILURE); } while (0)
 
-#define payload 1024
+#define payload 1024*16
 #define packet_size (payload+4)
 #define times 4
 
@@ -95,6 +96,9 @@ int main(int argc, char** argv){
     int sfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sfd == -1)
     handle_error("socket");
+
+    int flag = 1;
+    setsockopt(sfd, IPPROTO_TCP, TCP_NODELAY, (char *)&flag, sizeof(int));
     
     if (connect(sfd, (struct sockaddr *) &server_addr, sizeof(server_addr)) == -1)
     handle_error("connect");

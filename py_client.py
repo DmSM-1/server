@@ -2,16 +2,16 @@ import socket
 import struct
 import os
 
-DEBUG = False
+DEBUG = True
 
 if DEBUG:
     SERVER_IP = "127.0.0.10"
 else:
     SERVER_IP = "95.181.175.77"
 
-SERVER_PORT = 8000
-PACKET_SIZE = 1028
-DATA_SIZE = 1024
+SERVER_PORT = 53255  # sin_port = 2000 без htons на x86
+PAYLOAD = 1024 * 16
+PACKET_SIZE = PAYLOAD + 4
 
 
 def robust_send(sock, data):
@@ -45,7 +45,7 @@ def send_file(sock, filepath, name, filetype):
     # Данные: [WRIT 4б][DATA 1024б]
     with open(filepath, "rb") as f:
         while True:
-            chunk = f.read(DATA_SIZE)
+            chunk = f.read(PAYLOAD)
             if not chunk:
                 break
             buf = bytearray(PACKET_SIZE)
@@ -71,6 +71,7 @@ def main():
     num_dirs = count_subdirectories("pc_dir")
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
     sock.connect((SERVER_IP, SERVER_PORT))
 
     # --- Отправка ---
@@ -104,7 +105,7 @@ def main():
             file_open = True
 
         elif header == b"WRIT" and file_open:
-            to_write = min(size, DATA_SIZE)
+            to_write = min(size, PAYLOAD)
             file.write(buf[4:4 + to_write])
             size -= to_write
 

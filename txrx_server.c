@@ -1,5 +1,6 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -15,7 +16,7 @@
 
 // #define DEBUG
 #define min(a,b) ((long long)a>(long long)b)?(long long)b:(long long)a
-#define payload 1024
+#define payload 1024*16
 #define packet_size (payload+4)
 #define times 4
 
@@ -123,6 +124,9 @@ void* pc_handler(void* args){
     int sfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sfd == -1)
         handle_error("socket");
+    int flag = 1;
+    setsockopt(sfd, IPPROTO_TCP, TCP_NODELAY, (char *)&flag, sizeof(int));
+    
 
     if (bind(sfd, (struct sockaddr *) &server_addr, sizeof(server_addr)) == -1)
         handle_error("bind");
