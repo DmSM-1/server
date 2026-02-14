@@ -37,6 +37,8 @@ int main(int argc, char** argv){
 
     int confd = accept(sfd, (struct sockaddr *) &server_addr, &cl_size);
 
+    printf("Connection was established\n");
+
     int stage = 0;
     char buf[1025];
     char filename[128];
@@ -46,11 +48,18 @@ int main(int argc, char** argv){
 
         switch (buf[0]){
 
-            case 1: memcpy(filename, buf+1, 128); file = fopen(filename, "wb"); break;
+            case 1: 
+                memcpy(filename, buf+1, 128); 
+                printf("Open file %s\n", filename);
+                file = fopen(filename, "wb"); 
+            break;
 
             case 2: fwrite(buf+1, 1, 1024, file); break;
 
-            case 3: fclose(file); break;
+            case 3: 
+                printf("Close file %s\n", filename);
+                fclose(file); 
+            break;
 
         default: break;
         }
