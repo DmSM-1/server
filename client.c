@@ -31,12 +31,23 @@ int main(int argc, char** argv){
     if (connect(sfd, (struct sockaddr *) &server_addr, sizeof(server_addr)) == -1)
     handle_error("connect");
     
-    char* buf = malloc(1024);
+    char buf[1025];
+    char filename[128] = "Fly Me To The Moon.mp3";
+    FILE* file = fopen(filename, "rb");
 
-    read(0, buf, 1024);
-    send(sfd, buf, 1024, 0);
 
-    free(buf);
+    buf[0] = 1;
+    memcpy(buf, filename, 128);
+    send(sfd, buf, 1025, 0);
+
+    buf[0] = 2;
+    while (fread(buf+1, 1, 1024, file)){
+        send(sfd, buf, 1025, 0);
+    }
+
+    buf[0] = 3;
+    send(sfd, buf, 1025, 0);
+
     close(sfd);
 
     return 0;

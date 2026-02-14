@@ -19,9 +19,7 @@
 int main(int argc, char** argv){
 
     struct sockaddr_in server_addr, client_addr;
-
-    char* buf = malloc(1024);
-
+    
     server_addr.sin_family       = AF_INET;
     server_addr.sin_addr.s_addr  = SERVER_IP;
     server_addr.sin_port         = 2000;
@@ -39,9 +37,24 @@ int main(int argc, char** argv){
 
     int confd = accept(sfd, (struct sockaddr *) &server_addr, &cl_size);
 
-    recv(confd, buf, 1024, 0);
-    
-    printf("%s\n", buf);
+    int stage = 0;
+    char buf[1025];
+    char filename[128];
+    FILE* file;
+
+    while (recv(confd, buf, 1025, 0)>0){
+
+        switch (buf[0]){
+
+            case 1: memcpy(filename, buf+1, 128); file = fopen(filename, "wb"); break;
+
+            case 2: fwrite(buf+1, 1, 1024, file); break;
+
+            case 3: fclose(file); break;
+
+        default: break;
+        }
+    }
 
     close(confd);
     close(sfd);
