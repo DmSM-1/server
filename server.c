@@ -45,12 +45,13 @@ int main(int argc, char** argv){
     FILE* file;
 
     while (recv(confd, buf, 1025, 0)>0){
-
         switch (buf[0]){
 
             case 1: 
+                printf("eee\n");
                 memcpy(filename, buf+1, 128); 
                 printf("Open file %s\n", filename);
+                
                 file = fopen(filename, "wb"); 
             break;
 
