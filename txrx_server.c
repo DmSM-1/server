@@ -309,9 +309,9 @@ void* tx_handler(void* args){
 
         for (int i = 1; i <= num_files; i++){
             // Когда готовы — шлём ACTV
-            sem_post(&start_rx);
             sem_wait(&start_tx);
             send_cmd(confd, "ACTV", packet_size, buf);
+            sem_post(&start_rx);
             // ... ждём завершения передачи ...
         }
 
@@ -374,11 +374,9 @@ void* rx_handler(void* args){
 
         int num_files = count_files("buf/tx");
 
-        // send_cmd(confd, "ACTV", packet_size, buf);
-        // sem_post(&start_rx);
+        sem_post(&start_rx);
         for (int i = 1; i <= num_files; i++){
             // Когда готовы — шлём ACTV
-            sem_post(&start_tx);
             sem_wait(&start_rx);
             send_cmd(confd, "ACTV", packet_size, buf);
 
@@ -389,7 +387,7 @@ void* rx_handler(void* args){
                 pos2 += r;
             }
             if (memcmp(buf, "RECV", 4) == 0){
-                // sem_post(&start_tx);
+                sem_post(&start_tx);
             }
 
             // sem_post(&start_tx);
