@@ -374,6 +374,7 @@ void* rx_handler(void* args){
 
         int num_files = count_files("buf/tx");
 
+        send_cmd(confd, "ACTV", packet_size, buf);
         sem_post(&start_rx);
         for (int i = 1; i <= num_files; i++){
             // Когда готовы — шлём ACTV
