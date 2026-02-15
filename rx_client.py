@@ -156,7 +156,7 @@ def main():
     while True:
         # Ждём команду ACTV от сервера
         print(f"\nWaiting for ACTV (frame {frame_idx})...")
-        STA = sdr.SDR(sdr_usb[1], Fc, Fs, buffer_size=2**16*100)
+        STA = sdr.SDR(sdr_usb[0], Fc, Fs, buffer_size=2**16*100)
         buf = recv_exact(sock, PACKET_SIZE)
         if buf is None:
             print("Connection closed")
