@@ -307,6 +307,8 @@ void* tx_handler(void* args){
         send_cmd(confd, "STAR", packet_size, buf);
         printf("TX: STAR sent\n");
 
+        sem_post(&start_rx);
+
         for (int i = 1; i <= num_files; i++){
             // Когда готовы — шлём ACTV
             sem_wait(&start_tx);
@@ -374,7 +376,7 @@ void* rx_handler(void* args){
 
         int num_files = count_files("buf/tx");
 
-        sem_post(&start_rx);
+        
         for (int i = 1; i <= num_files; i++){
             // Когда готовы — шлём ACTV
             sem_wait(&start_rx);

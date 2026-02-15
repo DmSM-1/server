@@ -163,7 +163,7 @@ def main():
 
         # 3. Паддинг нулями: [zeros(1, 25*buffer_size), tx_waveform]
         STA = sdr.SDR(sdr_usb[0], Fc, Fs, tx_cycle_buffer=1)
-        padding = np.zeros(5 * STA.buffer_size, dtype=tx_waveform.dtype)
+        padding = np.zeros(25 * STA.buffer_size, dtype=tx_waveform.dtype)
         tx_waveform = np.concatenate([padding, tx_waveform])
 
         # 4. Ждём команду ACTV от сервера
