@@ -307,7 +307,7 @@ void* tx_handler(void* args){
         send_cmd(confd, "STAR", packet_size, buf);
         printf("TX: STAR sent\n");
 
-        sem_post(&start_rx);
+        sem_post(&start_tx);
 
         for (int i = 1; i <= num_files; i++){
             // Когда готовы — шлём ACTV
