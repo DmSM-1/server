@@ -152,7 +152,7 @@ def main():
 
     os.makedirs("rx_buf/data", exist_ok=True)
 
-    frame_idx = 0
+    frame_idx = 1
     while True:
         # Ждём команду ACTV от сервера
         print(f"\nWaiting for ACTV (frame {frame_idx})...")
@@ -180,9 +180,6 @@ def main():
 
         plt.plot(abs(rx_waveform))
         plt.show()
-
-        if frame_idx == 0:
-            continue
 
         # Сохраняем как .mat (1, 2, 3, ...)
         filepath = f"rx_buf/data/{frame_idx}.mat"
