@@ -21,7 +21,7 @@
 #define times 4
 
 #ifdef DEBUG
-    #define SERVER_IP inet_addr("192.168.3.12")
+    #define SERVER_IP inet_addr("127.0.0.6")
 #else
     #define SERVER_IP inet_addr("95.181.175.77")
 #endif
@@ -33,7 +33,24 @@
 sem_t init_tx;
 sem_t init_rx;  
 sem_t end_tx;           
-sem_t end_rx;           
+sem_t end_rx;   
+sem_t start_tx;  
+sem_t start_rx;    
+
+int count_files(const char *path) {
+    struct dirent *entry;
+    DIR *d = opendir(path);
+    if (d == NULL) return 0;
+
+    int count = 0;
+    while ((entry = readdir(d)) != NULL) {
+        if (entry->d_type == DT_REG)
+            count++;
+    }
+    closedir(d);
+    return count;
+}
+
 
 
 void clear_dir(const char *path) {
@@ -210,7 +227,6 @@ void* pc_handler(void* args){
 
         printf("PC: INIT END\n");
         
-        
         sem_post(&init_tx);
         sem_post(&init_rx);
 
@@ -218,8 +234,8 @@ void* pc_handler(void* args){
         sem_wait(&end_rx);
         
         for (int i = 1; i < num_dirs+1; i++){
-            sprintf(filename, "buf/tx/%d", i);
-            sprintf(name, "%d", i);
+            sprintf(filename, "buf/rx/%d.mat", i);
+            sprintf(name, "result.mat");
             send_file(confd, filename, name, "FILE", packet_size, buf);
         }
         send_cmd(confd, "STAR", packet_size, buf);
@@ -234,18 +250,196 @@ void* pc_handler(void* args){
 }
 
 void* tx_handler(void* args){
+    struct sockaddr_in server_addr, client_addr;
+    
+    server_addr.sin_family       = AF_INET;
+    server_addr.sin_addr.s_addr  = SERVER_IP;
+    server_addr.sin_port         = 2001;
+
+    int sfd = socket(AF_INET, SOCK_STREAM, 0);
+    if (sfd == -1)
+        handle_error("socket tx");
+
+    int flag = 1;
+    setsockopt(sfd, IPPROTO_TCP, TCP_NODELAY, (char *)&flag, sizeof(int));
+    setsockopt(sfd, SOL_SOCKET, SO_REUSEADDR, &flag, sizeof(flag));
+    
+    int buf_size = 1024 * 1024;
+    setsockopt(sfd, SOL_SOCKET, SO_RCVBUF, &buf_size, sizeof(buf_size));
+    setsockopt(sfd, SOL_SOCKET, SO_SNDBUF, &buf_size, sizeof(buf_size));
+
+    if (bind(sfd, (struct sockaddr *) &server_addr, sizeof(server_addr)) == -1)
+        handle_error("bind tx");
+
     for (int iter = 0; iter < times; iter++){
+        
+        listen(sfd, 1);
+        int cl_size = sizeof(client_addr);
+        
+        int confd = accept(sfd, (struct sockaddr *) &client_addr, &cl_size);
+        setsockopt(confd, IPPROTO_TCP, TCP_NODELAY, (char *)&flag, sizeof(int));
+        int cb_size = 1024 * 1024;
+        setsockopt(confd, SOL_SOCKET, SO_RCVBUF, &cb_size, sizeof(cb_size));
+        setsockopt(confd, SOL_SOCKET, SO_SNDBUF, &cb_size, sizeof(cb_size));
+        
+        printf("TX: Connection established\n");
+        
         sem_wait(&init_tx);
+
+        char buf[packet_size];
+        char filename[128];
+        char name[128];
+
+        // 1. Отправляем конфиг
+        send_file(confd, "buf/cfg", "cfg", "CONF", packet_size, buf);
+        printf("TX: sent config\n");
+
+        // 2. Считаем ФАЙЛЫ (не папки!) в buf/tx/
+        int num_files = count_files("buf/tx");
+        for (int i = 1; i <= num_files; i++){
+            sprintf(filename, "buf/tx/%d", i);
+            sprintf(name, "%d", i);
+            send_file(confd, filename, name, "FILE", packet_size, buf);
+            printf("TX: sent %s\n", filename);
+        }
+
+        // 3. Сигнал "всё отправлено"
+        send_cmd(confd, "STAR", packet_size, buf);
+        printf("TX: STAR sent\n");
+
+        for (int i = 1; i <= num_files; i++){
+            // Когда готовы — шлём ACTV
+            sem_wait(&start_tx);
+            send_cmd(confd, "ACTV", packet_size, buf);
+            sem_post(&start_rx);
+            // ... ждём завершения передачи ...
+        }
+
+        close(confd);
+        
         sem_post(&end_tx);
     }
+
+    close(sfd);
     return NULL;
 }
 
 void* rx_handler(void* args){
+    struct sockaddr_in server_addr, client_addr;
+    
+    server_addr.sin_family       = AF_INET;
+    server_addr.sin_addr.s_addr  = SERVER_IP;
+    server_addr.sin_port         = 2002;
+
+    int sfd = socket(AF_INET, SOCK_STREAM, 0);
+    if (sfd == -1)
+        handle_error("socket rx");
+
+    int flag = 1;
+    setsockopt(sfd, IPPROTO_TCP, TCP_NODELAY, (char *)&flag, sizeof(int));
+    setsockopt(sfd, SOL_SOCKET, SO_REUSEADDR, &flag, sizeof(flag));
+
+    int buf_size = 1024 * 1024;
+    setsockopt(sfd, SOL_SOCKET, SO_RCVBUF, &buf_size, sizeof(buf_size));
+    setsockopt(sfd, SOL_SOCKET, SO_SNDBUF, &buf_size, sizeof(buf_size));
+
+    if (bind(sfd, (struct sockaddr *) &server_addr, sizeof(server_addr)) == -1)
+        handle_error("bind rx");
+
     for (int iter = 0; iter < times; iter++){
+
+        listen(sfd, 1);
+        int cl_size = sizeof(client_addr);
+
+        int confd = accept(sfd, (struct sockaddr *) &client_addr, &cl_size);
+        setsockopt(confd, IPPROTO_TCP, TCP_NODELAY, (char *)&flag, sizeof(int));
+        int cb_size = 1024 * 1024;
+        setsockopt(confd, SOL_SOCKET, SO_RCVBUF, &cb_size, sizeof(cb_size));
+        setsockopt(confd, SOL_SOCKET, SO_SNDBUF, &cb_size, sizeof(cb_size));
+
+        printf("RX: Connection established\n");
+
         sem_wait(&init_rx);
+
+        char buf[packet_size];
+        char filename[128];
+
+        // 1. Отправляем конфиг
+        send_file(confd, "buf/cfg", "cfg", "CONF", packet_size, buf);
+        printf("RX: sent config\n");
+
+        // 2. Сигнал "забирай данные"
+        send_cmd(confd, "STAR", packet_size, buf);
+        printf("RX: STAR sent, waiting for data...\n");
+
+        int num_files = count_files("buf/tx");
+
+        sem_post(&start_rx);
+        for (int i = 1; i <= num_files; i++){
+            // Когда готовы — шлём ACTV
+            sem_wait(&start_rx);
+            send_cmd(confd, "ACTV", packet_size, buf);
+
+            int pos2 = 0;
+            while (pos2 < packet_size){
+                int r = recv(confd, buf+pos2, packet_size-pos2, 0);
+                if (r <= 0) break;
+                pos2 += r;
+            }
+            if (memcmp(buf, "RECV", 4) == 0){
+                sem_post(&start_tx);
+            }
+
+            // sem_post(&start_tx);
+            // ... ждём завершения передачи ...
+        }
+        send_cmd(confd, "STAR", packet_size, buf);
+
+        // 3. Принимаем файлы от SDR
+        int pos = 0;
+        int readed = 0;
+        long long size = 0;
+        char file_open = 0;
+        FILE* file;
+
+        while ((readed = recv(confd, buf+pos, packet_size - pos, 0)) > 0){
+            pos += readed;
+            if (pos < packet_size) continue;
+
+            if (memcmp(buf, "FILE", 4) == 0 && file_open == 0){
+                memcpy((char*)&size, buf+4, sizeof(size));
+                sprintf(filename, "buf/rx/%s", buf+4+sizeof(size));
+                printf("RX: FILE %s\n", filename);
+                file = fopen(filename, "wb");
+                file_open = 1;
+            }
+            else if (memcmp(buf, "WRIT", 4) == 0 && file_open == 1){
+                fwrite(buf+4, 1, min(size, payload), file);
+                size -= min(size, payload);
+            }
+            else if (memcmp(buf, "CLOS", 4) == 0 && file_open == 1){
+                printf("RX: CLOSE %s\n", filename);
+                fclose(file);
+                file_open = 0;
+            }
+            else if (memcmp(buf, "STAR", 4) == 0){
+                printf("RX: all files received\n");
+                if (file_open == 1){
+                    fclose(file);
+                    file_open = 0;
+                }
+                break;
+            }
+
+            memmove(buf, buf+packet_size, pos-packet_size);
+            pos -= packet_size;
+        }
+
+        close(confd);
         sem_post(&end_rx);
     }
+
+    close(sfd);
     return NULL;
 }
 
@@ -255,7 +449,9 @@ int main(int argc, char** argv){
     sem_init(&init_tx, 0, 0);  
     sem_init(&init_rx, 0, 0);  
     sem_init(&end_tx, 0, 0);  
-    sem_init(&end_rx, 0, 0);  
+    sem_init(&end_rx, 0, 0); 
+    sem_init(&start_tx, 0, 0); 
+    sem_init(&start_rx, 0, 0); 
 
     pthread_t pc_thread, tx_thread, rx_thread;
 
