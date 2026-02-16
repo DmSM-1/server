@@ -13,7 +13,7 @@
 #include <pthread.h>
 #include <dirent.h>
 
-// #define DEBUG
+#define DEBUG
 
 #ifdef DEBUG
     #define SERVER_IP inet_addr("127.0.0.10")

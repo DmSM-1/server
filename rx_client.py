@@ -156,7 +156,13 @@ def main():
     while True:
         # Ждём команду ACTV от сервера
         print(f"\nWaiting for ACTV (frame {frame_idx})...")
-        STA = sdr.SDR(sdr_usb[0], Fc, Fs, buffer_size=2**16*100)
+
+        STA = []
+        if DEBUG:
+            STA = sdr.SDR(sdr_usb[1], Fc, Fs, buffer_size=2**16*100)
+        else:
+            STA = sdr.SDR(sdr_usb[0], Fc, Fs, buffer_size=2**16*100)
+
         buf = recv_exact(sock, PACKET_SIZE)
         if buf is None:
             print("Connection closed")
@@ -172,16 +178,18 @@ def main():
 
         # Приём с SDR
         send_cmd(sock, "RECV")
+
+        rx_waveform = np.array(STA.recv(), dtype=np.complex128).reshape(-1, 1)
         rx_waveform = np.array(STA.recv(), dtype=np.complex128).reshape(-1, 1)
 
         t = time.time()
         print(f"  Recv: {rx_waveform.shape[0]} samples at {time.strftime('%H:%M:%S', time.localtime(t))}.{int((t % 1) * 1e6):06d}")
 
-
         plt.plot(abs(rx_waveform))
-        plt.show()
+        plt.show(block=False)
+        plt.pause(2.0)          
+        plt.close()  
 
-        # Сохраняем как .mat (1, 2, 3, ...)
         filepath = f"rx_buf/data/{frame_idx}.mat"
         scipy.io.savemat(filepath, {'rx_waveform': rx_waveform})
 

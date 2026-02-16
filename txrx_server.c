@@ -18,7 +18,7 @@
 #define min(a,b) ((long long)a>(long long)b)?(long long)b:(long long)a
 #define payload 1024*16
 #define packet_size (payload+4)
-#define times 4
+#define times 100
 
 #ifdef DEBUG
     #define SERVER_IP inet_addr("127.0.0.6")
@@ -34,6 +34,8 @@ sem_t init_tx;
 sem_t init_rx;  
 sem_t end_tx;           
 sem_t end_rx;   
+sem_t rx_clock;  
+sem_t tx_clock;  
 sem_t start_tx;  
 sem_t start_rx;    
 
@@ -148,7 +150,7 @@ void* pc_handler(void* args){
     int buf_size = 1024 * 1024;
     setsockopt(sfd, SOL_SOCKET, SO_RCVBUF, &buf_size, sizeof(buf_size));
     setsockopt(sfd, SOL_SOCKET, SO_SNDBUF, &buf_size, sizeof(buf_size));
-    
+    setsockopt(sfd, SOL_SOCKET, SO_REUSEADDR, &flag, sizeof(flag));
 
     if (bind(sfd, (struct sockaddr *) &server_addr, sizeof(server_addr)) == -1)
         handle_error("bind");
@@ -230,6 +232,14 @@ void* pc_handler(void* args){
         sem_post(&init_tx);
         sem_post(&init_rx);
 
+        for (int i = 0; i < num_dirs; i++){
+            sem_wait(&tx_clock);
+            sem_wait(&rx_clock);
+
+            sem_post(&start_tx);
+            sem_post(&start_rx);
+        }
+
         sem_wait(&end_tx);
         sem_wait(&end_rx);
         
@@ -267,7 +277,8 @@ void* tx_handler(void* args){
     int buf_size = 1024 * 1024;
     setsockopt(sfd, SOL_SOCKET, SO_RCVBUF, &buf_size, sizeof(buf_size));
     setsockopt(sfd, SOL_SOCKET, SO_SNDBUF, &buf_size, sizeof(buf_size));
-
+    setsockopt(sfd, SOL_SOCKET, SO_REUSEADDR, &flag, sizeof(flag));
+    
     if (bind(sfd, (struct sockaddr *) &server_addr, sizeof(server_addr)) == -1)
         handle_error("bind tx");
 
@@ -290,11 +301,9 @@ void* tx_handler(void* args){
         char filename[128];
         char name[128];
 
-        // 1. Отправляем конфиг
         send_file(confd, "buf/cfg", "cfg", "CONF", packet_size, buf);
         printf("TX: sent config\n");
 
-        // 2. Считаем ФАЙЛЫ (не папки!) в buf/tx/
         int num_files = count_files("buf/tx");
         for (int i = 1; i <= num_files; i++){
             sprintf(filename, "buf/tx/%d", i);
@@ -303,17 +312,23 @@ void* tx_handler(void* args){
             printf("TX: sent %s\n", filename);
         }
 
-        // 3. Сигнал "всё отправлено"
         send_cmd(confd, "STAR", packet_size, buf);
         printf("TX: STAR sent\n");
 
         for (int i = 1; i <= num_files; i++){
-            // Когда готовы — шлём ACTV
+            sem_post(&tx_clock);
             sem_wait(&start_tx);
+
             send_cmd(confd, "ACTV", packet_size, buf);
-            sem_post(&start_rx);
-            // ... ждём завершения передачи ...
+
+            int pos2 = 0;
+            while (pos2 < packet_size){
+                int r = recv(confd, buf+pos2, packet_size-pos2, 0);
+                if (r <= 0) break;
+                pos2 += r;
+            }
         }
+        
 
         close(confd);
         
@@ -342,6 +357,7 @@ void* rx_handler(void* args){
     int buf_size = 1024 * 1024;
     setsockopt(sfd, SOL_SOCKET, SO_RCVBUF, &buf_size, sizeof(buf_size));
     setsockopt(sfd, SOL_SOCKET, SO_SNDBUF, &buf_size, sizeof(buf_size));
+    setsockopt(sfd, SOL_SOCKET, SO_REUSEADDR, &flag, sizeof(flag));
 
     if (bind(sfd, (struct sockaddr *) &server_addr, sizeof(server_addr)) == -1)
         handle_error("bind rx");
@@ -364,20 +380,19 @@ void* rx_handler(void* args){
         char buf[packet_size];
         char filename[128];
 
-        // 1. Отправляем конфиг
         send_file(confd, "buf/cfg", "cfg", "CONF", packet_size, buf);
         printf("RX: sent config\n");
 
-        // 2. Сигнал "забирай данные"
         send_cmd(confd, "STAR", packet_size, buf);
         printf("RX: STAR sent, waiting for data...\n");
 
         int num_files = count_files("buf/tx");
 
-        sem_post(&start_rx);
         for (int i = 1; i <= num_files; i++){
-            // Когда готовы — шлём ACTV
+
+            sem_post(&rx_clock);
             sem_wait(&start_rx);
+
             send_cmd(confd, "ACTV", packet_size, buf);
 
             int pos2 = 0;
@@ -386,12 +401,7 @@ void* rx_handler(void* args){
                 if (r <= 0) break;
                 pos2 += r;
             }
-            if (memcmp(buf, "RECV", 4) == 0){
-                sem_post(&start_tx);
-            }
 
-            // sem_post(&start_tx);
-            // ... ждём завершения передачи ...
         }
         send_cmd(confd, "STAR", packet_size, buf);
 
@@ -452,6 +462,8 @@ int main(int argc, char** argv){
     sem_init(&end_rx, 0, 0); 
     sem_init(&start_tx, 0, 0); 
     sem_init(&start_rx, 0, 0); 
+    sem_init(&rx_clock, 0, 0); 
+    sem_init(&tx_clock, 0, 0); 
 
     pthread_t pc_thread, tx_thread, rx_thread;
 

@@ -10,8 +10,8 @@
 #include <unistd.h>
 
 
-#define SERVER_IP inet_addr("95.181.175.77")
-// #define SERVER_IP inet_addr("127.0.0.1")
+// #define SERVER_IP inet_addr("95.181.175.77")
+#define SERVER_IP inet_addr("127.0.0.1")
 
 #define handle_error(msg) \
            do { perror(msg); exit(EXIT_FAILURE); } while (0)
@@ -35,7 +35,6 @@ int main(int argc, char** argv){
     listen(sfd, 1);
 
     int cl_size = sizeof(client_addr);
-
     int confd = accept(sfd, (struct sockaddr *) &server_addr, &cl_size);
 
     printf("Connection was established\n");
@@ -43,25 +42,44 @@ int main(int argc, char** argv){
     int stage = 0;
     char buf[1025];
     char filename[128] = "buf/";
+    char file_open = 0;
     FILE* file;
+
 
     while (recv(confd, buf, 1025, 0)>0){
         switch (buf[0]){
 
-            case 1: 
-                printf("eee\n");
-                memcpy(filename+4, buf+1, 124); 
-                printf("Open file %s\n", filename);
-                
-                file = fopen(filename, "wb"); 
+            case 'O': 
+                if (file_open == 0){
+                    memcpy(filename+4, buf+1, 124); 
+                    printf("Open file %s\n", filename);
+                    file = fopen(filename, "wb"); 
+                    file_open = 1;
+                }
             break;
 
-            case 2: fwrite(buf+1, 1, 1024, file); break;
-
-            case 3: 
-                printf("Close file %s\n", filename);
-                fclose(file); 
+            case 'W': 
+                if (file_open == 1)
+                    fwrite(buf+1, 1, 1024, file); 
             break;
+
+            case 'C': 
+                if (file_open == 1){
+                    printf("Close file %s\n", filename);
+                    fclose(file); 
+                    file_open = 0;
+                }
+            break;
+
+            case 'o':
+                if (file_open == 0){
+                    memcpy(filename+4, buf+1, 124); 
+                    printf("Open file %s\n", filename);
+                    file = fopen(filename, "wb"); 
+                    file_open = 1;
+                }
+
+
 
         default: break;
         }

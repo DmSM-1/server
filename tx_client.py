@@ -8,6 +8,7 @@ import subprocess
 import time
 
 DEBUG = False
+times = 4
 
 if DEBUG:
     SERVER_IP = "127.0.0.6"
@@ -113,7 +114,6 @@ def main():
             print("TX: all files received")
             break
 
-    # --- Парсим config ---
     config = parse_config("rx_buf/cfg")
 
     print("\n=== Parsed Config ===")
@@ -123,7 +123,6 @@ def main():
         else:
             print(f"  {key:20s} = {val}")
 
-    # Основные параметры доступны как:
     N           = config['N']               # FFT size (1024)
     L           = config['L']               # CP length (32)
     Fs          = config['Fs']              # Sample rate (20e6)
@@ -154,31 +153,27 @@ def main():
         filepath = f"tx_buf/{fname}"
         print(f"Processing {filepath}...")
 
-        # 1. Читаем .mat
         mat_data = scipy.io.loadmat(filepath, squeeze_me=True)
         tx_waveform = mat_data['tx_waveform']
 
-        # 2. Масштабируем: tx_waveform * 2^12
         tx_waveform = tx_waveform.flatten() * (2**12)
 
-        # 3. Паддинг нулями: [zeros(1, 25*buffer_size), tx_waveform]
         STA = sdr.SDR(sdr_usb[0], Fc, Fs, tx_cycle_buffer=1)
-        padding = np.zeros(25 * STA.buffer_size, dtype=tx_waveform.dtype)
+        padding = np.zeros(10 * STA.buffer_size, dtype=tx_waveform.dtype)
         tx_waveform = np.concatenate([padding, tx_waveform])
 
-        # 4. Ждём команду ACTV от сервера
         print(f"  Waiting for ACTV...")
         buf = recv_exact(sock, PACKET_SIZE)
         if buf is None or buf[0:4] != b"ACTV":
-            print(f"  ERROR: expected ACTV, got {buf[0:4] if buf else 'None'}")
             break
         print(f"  ACTV received")
 
-        # 5. Отправляем в эфир
         STA.send(tx_waveform)
-        time.sleep(3)
+        time.sleep(5)
         t = time.time()
         print(f"  Sent: {len(tx_waveform)} samples at {time.strftime('%H:%M:%S', time.localtime(t))}.{int((t % 1) * 1e6):06d}")
+
+        send_cmd(sock, "STAR")
 
         del STA
 
