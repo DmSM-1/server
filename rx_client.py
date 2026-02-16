@@ -181,6 +181,7 @@ def main():
 
         rx_waveform = np.array(STA.recv(), dtype=np.complex128).reshape(-1, 1)
         rx_waveform = np.array(STA.recv(), dtype=np.complex128).reshape(-1, 1)
+        rx_waveform = np.array(STA.recv(), dtype=np.complex128).reshape(-1, 1)
 
         t = time.time()
         print(f"  Recv: {rx_waveform.shape[0]} samples at {time.strftime('%H:%M:%S', time.localtime(t))}.{int((t % 1) * 1e6):06d}")

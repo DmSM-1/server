@@ -169,7 +169,7 @@ def main():
         print(f"  ACTV received")
 
         STA.send(tx_waveform)
-        time.sleep(5)
+        time.sleep(10)
         t = time.time()
         print(f"  Sent: {len(tx_waveform)} samples at {time.strftime('%H:%M:%S', time.localtime(t))}.{int((t % 1) * 1e6):06d}")
 
